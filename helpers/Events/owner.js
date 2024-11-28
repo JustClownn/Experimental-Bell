@@ -1,5 +1,6 @@
 /*!-======[ Module Imports ]======-!*/
 const fs = "fs".import()
+const path = "path".import()
 const { getContentType } = "baileys".import()
 
 /*!-======[ Function Imports ]======-!*/
@@ -53,8 +54,10 @@ export default async function on({ cht, Exp, store, ev, is }) {
         args: infos.owner.set
     }, async () => {
         let fquotedKeys = Object.keys(Data.fquoted)
-        const [t1, t2, t3] = cht.q.split(" ")
-        
+        let [t1, t2, t3] = cht.q.split(" ")
+        if(!options[t1] && t1.includes("\n")){
+          t1 = t1.split("\n")[0]
+        }
 
         const mode = options[t1] || (t1 == "fquoted" 
            ? `Success ${fquotedKeys.includes(t2) ? "change" : "add"} fake quoted ${t2}\n\nList fake quoted:\n\n- ${!fquotedKeys.includes(t2) ? [...fquotedKeys, t2].join("\n- ") : fquotedKeys.join("\n- ")}`
@@ -394,7 +397,7 @@ export default async function on({ cht, Exp, store, ev, is }) {
         if (!isOwnerAccess) return sendPremInfo({ text:infos.messages.premium(trial) });
         if (!is.owner) return cht.reply("Maaf, males nanggepin")
         if (cht.mention.length < 1) return sendPremInfo({ text });
-        if(!cht.quoted && !cht.q.includes("|")) return sendPremInfo({ _text: infos.owner.wrongFormat });
+        if(!cht.quoted && !cht.q.includes("|")) return sendPremInfo({ _text: infos.owner.wrongFormat, text });
         let time = (cht.q ? cht.q.split("|")[1] : false) || cht.q || false;
         if (!time) return sendPremInfo({ text });
         let sender = cht.mention[0].split("@")[0];
@@ -527,5 +530,20 @@ export default async function on({ cht, Exp, store, ev, is }) {
 
         cht.reply(`✅ **Status API Key**: ${isExpired ? "⛔ Kedaluwarsa" : "✅ Aktif"}\n🔒 **Batas Harian**: ${limit} hit\n📊 **Penggunaan Saat Ini**: ${usage} hit\n📈 **Total Hit**: ${totalHit} hit\n🟢 **Sisa Hit**: ${remaining} hit\n\n⏳ **Reset Limit**:\n   - **Waktu Reset**: ${reset}\n   - **Interval Reset**: ${resetTime.days} hari ${resetTime.hours} jam ${resetTime.minutes} menit ${resetTime.seconds} detik\n📅 **Masa Berlaku**:\n   - **Berakhir Pada**: ${expired}\n   - **Status Kedaluwarsa**: ${isExpired ? "✅ Sudah Kedaluwarsa" : "❌ Belum Kedaluwarsa"}\n\n✨ **Fitur yang Tersedia**:\n${featuresList}\n📌 **Catatan**: Gunakan API secara bijak dan sesuai dengan batas penggunaan.\n  `)
     })
-
+    
+    ev.on({ 
+        cmd: ['backup'], 
+        listmenu: ['backup'],
+        isOwner: true,
+        tag: "owner"
+    }, async ({ args }) => {
+      await cht.reply("Proses backup dimulai...")
+      let b = "./backup.tar.gz"
+      let s = await Exp.func.createTarGz("./",b)
+      if(!s.status) return cht.reply(s.msg)
+      await cht.edit(`File backup sedang dikirim${is.group ? " melalui private chat..." : "..."}`, keys[cht.sender])
+      await Exp.sendMessage(cht.sender, { document: { url: b }, mimetype: "application/zip", fileName: `${path.basename(path.resolve("./"))} || ${Exp.func.dateFormatter(Date.now(), "Asia/Jakarta")}.tar.gz` }, { quoted: cht })
+      await cht.reply(`*Proses backup selesai✅️*${is.group ? "\nFile telah dikirimkan melalui chat pribadi" : "" }`)
+      fs.unlinkSync(b)
+    })
 }

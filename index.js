@@ -29,7 +29,8 @@ let {
   	getContentType,
   	makeInMemoryStore,
   	getBinaryNodeChild, 
-  	jidNormalizedUser
+  	jidNormalizedUser,
+  	Browsers
 } = baileys;
 
 /*!-======[ Functions Imports ]======-!*/
@@ -43,6 +44,7 @@ Data.stubTypeMsg = (await `${fol[1]}stubTypeMsg.js`.r()).default
 let store = makeInMemoryStore({ logger: pino().child({ level: 'silent', stream: 'store' }) });
 
 async function launch() {
+  try {
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -65,11 +67,10 @@ async function launch() {
   	}
   	
   	let { state, saveCreds } = await useMultiFileAuthState(session);
-        
         const Exp = makeWASocket({
             logger: pino({ level: 'silent' }),
             printQRInTerminal: !global.pairingCode,
-            browser: ['Chrome (Linux)', global["botname"], '1.0.0'],
+            browser: Browsers.ubuntu('Chrome'),
             auth: state,
             getMessage: async (key) => {
               let jid = jidNormalizedUser(key.remoteJid)
@@ -141,7 +142,7 @@ async function launch() {
             await Connecting({ update, Exp, Boom, DisconnectReason, sleep, launch });
         });
 
-        Exp.ev.on('creds.update', saveCreds);
+        !fs.existsSync(session + "/creds.json") && Exp.ev.on('creds.update', saveCreds);
         
         Exp.ev.on('messages.upsert', async ({
   			messages
@@ -170,8 +171,9 @@ async function launch() {
                  }
              }
 	    });
-
-	    
 	    store.bind(Exp.ev);
+	} catch (error) {
+	  console.error(error)
+	}
 }
 launch()
